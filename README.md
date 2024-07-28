@@ -1,4 +1,4 @@
-## Creating a Docker Container for IBM Watsonx.ai, Langchain, and Jupyter Notebook with Elyra Compatible with CUDA
+## Creating a Docker Container for IBM Watsonx.ai, Langchain, and Jupyter Notebook with CUDA
 
 ### Introduction
 
@@ -92,8 +92,10 @@ COPY pyproject.toml ./
 RUN poetry config virtualenvs.create false && poetry install --no-interaction --no-ansi 
 
 # Install JupyterLab and Elyra using Poetry
-RUN poetry add jupyter
-#RUN poetry add jupyterlab
+RUN poetry add jupyterlab
+
+# Activate the Poetry environment (You can put this in a separate script)
+#RUN poetry shell
 
 # Copy Project Files
 COPY . .
@@ -101,6 +103,9 @@ COPY . .
 # Install additional Python packages using requirements.txt
 COPY requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
+
+# Setup JupyterLab kernel
+RUN python -m ipykernel install --user --name=watsonx
 
 # Expose JupyterLab Port
 EXPOSE 8888
@@ -157,12 +162,43 @@ To run the Docker container and expose JupyterLab, use the following command:
 
 ```bash
 docker run --gpus all -it --rm -p 8888:8888 watsonx-jupyter
+
 ```
 ![](assets/2024-07-28-21-30-20.png)
 The `--gpus all` flag ensures that the container can leverage your GPU for CUDA processing.
 
+If we wanto to push this image we can use 
+```bash
+docker tag watsonx-jupyter ruslanmv/watsonx-jupyter:latest
+docker push ruslanmv/watsonx-jupyter:latest
+```
+
+After running these commands, your Docker image will be available in your Docker Hub repository under the name exampleuser/watsonx-jupyter, and you can pull it on any machine using:
+```bash
+docker pull exampleuser/watsonx-jupyter:latest
+```
+
+
+# Examples
+In the notebook folder you can find different examples to use rag.
+![](assets/2024-07-28-23-24-20.png)
+
+ you can find different exmaples.
+
+## Use watsonx Granite Model Series, Chroma, and LangChain to answer questions (RAG)
+![](assets/2024-07-28-23-12-08.png)
+
+
+## Use watsonx, and `mistralai/mixtral-8x7b-instruct-v01` to generate code based on instruction
+![](assets/2024-07-28-23-12-48.png)
+
+
+##  RAG: A simple introduction
+![](assets/2024-07-28-23-13-06.png)
+
+
 ### Conclusion
 
-By following these steps, you will have a Docker container that is set up with IBM Watsonx.ai, Langchain, and Jupyter Notebook with Elyra, all compatible with CUDA for GPU acceleration. This powerful environment will enable you to perform advanced AI and machine learning tasks efficiently.
+By following these steps, you will have a Docker container that is set up with IBM Watsonx.ai, Langchain, and Jupyter Notebook, all compatible with CUDA for GPU acceleration. This powerful environment will enable you to perform advanced AI and machine learning tasks efficiently.
 
 Happy coding!
