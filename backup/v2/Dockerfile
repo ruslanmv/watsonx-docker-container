@@ -74,10 +74,8 @@ COPY pyproject.toml ./
 RUN poetry config virtualenvs.create false && poetry install --no-interaction --no-ansi 
 
 # Install JupyterLab and Elyra using Poetry
+#RUN poetry add jupyter
 RUN poetry add jupyterlab
-
-# Activate the Poetry environment (You can put this in a separate script)
-#RUN poetry shell
 
 # Copy Project Files
 COPY . .
@@ -85,9 +83,6 @@ COPY . .
 # Install additional Python packages using requirements.txt
 COPY requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
-
-# Setup JupyterLab kernel
-RUN python -m ipykernel install --user --name=watsonx
 
 # Expose JupyterLab Port
 EXPOSE 8888

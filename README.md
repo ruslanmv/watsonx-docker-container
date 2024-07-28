@@ -16,8 +16,41 @@ Before we begin, make sure you have the following installed on your system:
 Below is the Dockerfile we will use to build our Docker image. It includes best practices, CUDA compatibility, and the installation of JupyterLab with Elyra.
 
 ```Dockerfile
+# ARG for the base image
+ARG IMAGE_NAME=nvidia/cuda
+
 # Base Image
-FROM nvidia/cuda:12.0-devel-ubuntu22.04
+FROM ${IMAGE_NAME}:12.5.1-devel-ubuntu22.04 as base
+
+# Different stages for different architectures
+FROM base as base-amd64
+
+ENV NV_CUDNN_VERSION 9.2.1.18-1
+ENV NV_CUDNN_PACKAGE_NAME libcudnn9-cuda-12
+ENV NV_CUDNN_PACKAGE libcudnn9-cuda-12=${NV_CUDNN_VERSION}
+ENV NV_CUDNN_PACKAGE_DEV libcudnn9-dev-cuda-12=${NV_CUDNN_VERSION}
+
+FROM base as base-arm64
+
+ENV NV_CUDNN_VERSION 9.2.1.18-1
+ENV NV_CUDNN_PACKAGE_NAME libcudnn9-cuda-12
+ENV NV_CUDNN_PACKAGE libcudnn9-cuda-12=${NV_CUDNN_VERSION}
+ENV NV_CUDNN_PACKAGE_DEV libcudnn9-dev-cuda-12=${NV_CUDNN_VERSION}
+
+# Using the appropriate base based on architecture
+FROM base-${TARGETARCH}
+
+ARG TARGETARCH
+
+LABEL maintainer="NVIDIA CORPORATION <cudatools@nvidia.com>"
+LABEL com.nvidia.cudnn.version="${NV_CUDNN_VERSION}"
+
+# Install cuDNN
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ${NV_CUDNN_PACKAGE} \
+    ${NV_CUDNN_PACKAGE_DEV} \
+    && apt-mark hold ${NV_CUDNN_PACKAGE_NAME} \
+    && rm -rf /var/lib/apt/lists/*
 
 # Environment Variables
 ENV DEBIAN_FRONTEND=noninteractive
@@ -49,20 +82,21 @@ ENV PATH="/opt/venv/bin:$PATH"
 # Install Poetry (Using pip in the virtual environment)
 RUN pip install poetry==${POETRY_VERSION}
 
-# Set working directory
+# Set working director
 WORKDIR /app
 
 # Copy project files
-COPY pyproject.toml poetry.lock ./
+COPY pyproject.toml ./
 
 # Install Project Dependencies (Avoid creating a separate virtualenv)
 RUN poetry config virtualenvs.create false && poetry install --no-interaction --no-ansi 
 
+# Install JupyterLab and Elyra using Poetry
+RUN poetry add jupyter
+#RUN poetry add jupyterlab
+
 # Copy Project Files
 COPY . .
-
-# Install JupyterLab and Elyra
-RUN pip install --no-cache-dir jupyterlab elyra
 
 # Install additional Python packages using requirements.txt
 COPY requirements.txt ./
@@ -73,6 +107,7 @@ EXPOSE 8888
 
 # Start JupyterLab with Elyra on container launch
 CMD ["jupyter", "lab", "--ip=0.0.0.0", "--port=8888", "--allow-root"]
+
 ```
 
 ### requirements.txt
@@ -110,17 +145,20 @@ pdfminer-six=^20240706
 To build the Docker image, run the following command in the directory containing your Dockerfile:
 
 ```bash
-docker build -t my-jupyter-image .
+docker build -t watsonx-jupyter .
 ```
+![](assets/2024-07-28-21-29-58.png)
+and we got
+![](assets/2024-07-28-21-30-58.png)
 
 ### Running the Docker Container
 
 To run the Docker container and expose JupyterLab, use the following command:
 
 ```bash
-docker run --gpus all -it --rm -p 8888:8888 my-jupyter-image
+docker run --gpus all -it --rm -p 8888:8888 watsonx-jupyter
 ```
-
+![](assets/2024-07-28-21-30-20.png)
 The `--gpus all` flag ensures that the container can leverage your GPU for CUDA processing.
 
 ### Conclusion

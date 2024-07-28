@@ -64,7 +64,7 @@ ENV PATH="/opt/venv/bin:$PATH"
 # Install Poetry (Using pip in the virtual environment)
 RUN pip install poetry==${POETRY_VERSION}
 
-# Set working director
+# Set working directory
 WORKDIR /app
 
 # Copy project files
@@ -73,21 +73,15 @@ COPY pyproject.toml ./
 # Install Project Dependencies (Avoid creating a separate virtualenv)
 RUN poetry config virtualenvs.create false && poetry install --no-interaction --no-ansi 
 
-# Install JupyterLab and Elyra using Poetry
-RUN poetry add jupyterlab
-
-# Activate the Poetry environment (You can put this in a separate script)
-#RUN poetry shell
-
 # Copy Project Files
 COPY . .
+
+# Install JupyterLab and Elyra
+RUN pip install --no-cache-dir jupyterlab elyra
 
 # Install additional Python packages using requirements.txt
 COPY requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
-
-# Setup JupyterLab kernel
-RUN python -m ipykernel install --user --name=watsonx
 
 # Expose JupyterLab Port
 EXPOSE 8888
